@@ -1,6 +1,6 @@
 ---
 - name: Generate templates and create new repo
-  hosts: localhost
+  hosts: infra1
   gather_facts: false
   # connection: local
   vars:
@@ -39,8 +39,8 @@
         # machine_network: 10.1.196.0/24
       include_role:
         name: e2e-add-cluster-playbooks
-        apply:
-          delegate_to: infra1
+        # apply:
+        #   delegate_to: infra1
 
     - name: Delete Github repository
       vars:
@@ -55,7 +55,7 @@
         state: absent
         # force_defaults: no
       register: _result
-      delegate_to: infra1
+      # delegate_to: infra1
     
     - name: Create Github repository
       vars:
@@ -69,7 +69,7 @@
         state: present
         # force_defaults: no
       register: _result
-      delegate_to: infra1
+      # delegate_to: infra1
 
     - name: Add Files to GIT
       shell: "{{ item }}"
