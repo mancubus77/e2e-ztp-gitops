@@ -2,7 +2,7 @@
 - name: Create new node
   gather_facts: no
   hosts: infra1
-  vars:
+  # vars:
     # cluster_name: "glebe"
     # location: "gleberack"
     # uuid: "8560ac21-fd8f-4920-abdd-36e30d0628e3"
