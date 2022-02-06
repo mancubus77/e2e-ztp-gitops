@@ -7,4 +7,4 @@ roles:
     scm: git
     version: main
 collections: 
-  - community.general
+  - name: community.general
