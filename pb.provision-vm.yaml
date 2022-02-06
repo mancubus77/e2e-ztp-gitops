@@ -2,8 +2,8 @@
 - name: Deploy VM
   hosts: infra1
   gather_facts: false
-  vars:
-    cluster_name: glebe
+  # vars:
+  #   cluster_name: glebe
   tasks:
     - name: Ensure VM {{ cluster_name }} is down
       virt:
