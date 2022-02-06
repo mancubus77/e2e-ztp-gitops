@@ -3,10 +3,10 @@
   gather_facts: no
   hosts: infra1
   vars:
-    cluster_name: "glebe"
-    location: "gleberack"
-    uuid: "8560ac21-fd8f-4920-abdd-36e30d0628e3"
-    mac: "52:54:00:d1:76:aa"
+    # cluster_name: "glebe"
+    # location: "gleberack"
+    # uuid: "8560ac21-fd8f-4920-abdd-36e30d0628e3"
+    # mac: "52:54:00:d1:76:aa"
 
   tasks:
     - name: Extract Discovery ISO

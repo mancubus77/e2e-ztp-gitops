@@ -6,3 +6,5 @@ roles:
   - src: https://github.com/mancubus77/e2e-ansible-acm-app-template.git
     scm: git
     version: main
+collections: 
+  - community.general

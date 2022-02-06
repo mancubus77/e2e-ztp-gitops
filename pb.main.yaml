@@ -15,8 +15,8 @@
               3835613733346636613965303063396661643838613232623437
     acm_git: https://github.com/mancubus77/e2e-root-acm-repo.git
     giturl: "https://{{token}}@"
-    cluster_name: glebe
-    cluster_location: glebe-2077-nsw
+    # cluster_name: glebe
+    # cluster_location: glebe-2077-nsw
     machine_network: 10.1.196.0/24
   tasks: 
 
