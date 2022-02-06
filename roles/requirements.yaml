@@ -1,0 +1,8 @@
+roles:
+  # Cliuster templates
+  - src: https://github.com/mancubus77/e2e-add-cluster-playbooks.git
+    scm: git
+    version: main
+  - src: https://github.com/mancubus77/e2e-ansible-acm-app-template.git
+    scm: git
+    version: main

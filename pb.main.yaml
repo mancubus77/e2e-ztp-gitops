@@ -1,0 +1,123 @@
+---
+- name: Generate templates and create new repo
+  hosts: localhost
+  gather_facts: false
+  # connection: local
+  vars:
+    dst_template_path: /tmp/__tmp4repo
+    token: !vault |
+              $ANSIBLE_VAULT;1.1;AES256
+              30326338396632633233646163363037353666326138646235363966393438383137636230353137
+              3333326361336366356662323863366134393064643763370a313933646133393030623331363038
+              62616238626564346461626534373334323963633638633936326534346363613363373234303466
+              3937643961626431360a353461333939643730393463333435613430356134663931353730373364
+              30663663373936383134663738323164333139666134393262383633323832323136326138626331
+              3835613733346636613965303063396661643838613232623437
+    acm_git: https://github.com/mancubus77/e2e-root-acm-repo.git
+    giturl: "https://{{token}}@"
+    cluster_name: glebe
+    cluster_location: glebe-2077-nsw
+    machine_network: 10.1.196.0/24
+  tasks: 
+
+    - name: Ensure directoy is empty
+      ansible.builtin.file:
+        path: "{{ dst_template_path }}"
+        state: absent
+      ignore_errors: true
+
+    - name: Create new folder
+      ansible.builtin.file:
+        path: "{{ dst_template_path }}"
+        state: directory
+
+    - name: Generate templates
+      vars:
+        # ansible_connection: local
+        # cluster_name: hornsby
+        # cluster_location: hornsby-2077-nsw
+        # machine_network: 10.1.196.0/24
+      include_role:
+        name: e2e-add-cluster-playbooks
+
+    - name: Delete Github repository
+      vars:
+        connection: ssh
+        ansible_python_interpreter: /usr/bin/python2
+      community.general.github_repo:
+        # username: mancubus77@gmail.com
+        access_token: "{{ token }}"
+        name: "e2e-{{ cluster_name }}-cluster"
+        description: "Just for fun"
+        private: no
+        state: absent
+        # force_defaults: no
+      register: _result
+      delegate_to: infra1
+    
+    - name: Create Github repository
+      vars:
+        connection: ssh
+        ansible_python_interpreter: /usr/bin/python2
+      community.general.github_repo:
+        access_token: "{{ token }}"
+        name: "e2e-{{ cluster_name }}-cluster"
+        description: "Just for fun"
+        private: no
+        state: present
+        # force_defaults: no
+      register: _result
+      delegate_to: infra1
+
+    - name: Add Files to GIT
+      shell: "{{ item }}"
+      args:
+        chdir: "{{ dst_template_path }}"
+      with_items: 
+        - git init
+        - git add * 
+        - git commit -m "first commit"
+        - git branch -M main
+        - git remote add origin {{ _result.repo.clone_url | regex_replace('(https:\/\/)', giturl) }}
+        - git push -u origin main 
+
+    - name: Generate ACM APP 
+      vars:
+        # - cluster_name: hornsby
+        - dst_template_path: /tmp/lol1
+        - git_url: "{{ _result.repo.clone_url }}"
+      include_role:
+        name: e2e-ansible-acm-app-template
+
+    - name: Ensure directoy is empty
+      ansible.builtin.file:
+        path: "/tmp/acm-repo"
+        state: absent
+      ignore_errors: true
+
+    - name: Create folder
+      ansible.builtin.file:
+        path: "/tmp/acm-repo"
+        state: directory
+
+    - name: Checkout repo
+      shell: "{{ item }}"
+      args:
+        chdir: "/tmp/acm-repo"
+      with_items:
+        - git clone "{{ acm_git | regex_replace('(https:\/\/)', giturl) }}" .
+        - git config user.name "ZTP ROBO"
+        - git config user.email ztp@ztp.com
+        - mkdir managed-subscriptions/apps/vran-{{ cluster_name }}
+        - cp /tmp/lol1/* managed-subscriptions/apps/vran-{{ cluster_name }}/
+        - git add managed-subscriptions/apps/vran-{{ cluster_name }}/*
+        - git config user.name "ZTP ANSIBLE ROBO"
+        - git config user.email ztp@redhat.com
+        - git commit -a -m "Ansible| adding new cluster {{ cluster_name }}"
+        - git push 
+
+    - name: Ensure directoy is empty
+      ansible.builtin.file:
+        path: "/tmp/acm-repo"
+        state: absent
+      ignore_errors: true

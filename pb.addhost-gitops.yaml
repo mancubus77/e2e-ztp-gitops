@@ -1,0 +1,84 @@
+---
+- name: Create new node
+  gather_facts: no
+  hosts: infra1
+  vars:
+    cluster_name: "glebe"
+    location: "gleberack"
+    uuid: "8560ac21-fd8f-4920-abdd-36e30d0628e3"
+    mac: "52:54:00:d1:76:aa"
+
+  tasks:
+    - name: Extract Discovery ISO
+      kubernetes.core.k8s_info:
+        api_version: agent-install.openshift.io/v1beta1
+        kind: InfraEnv
+        name: "{{ cluster_name }}"
+        namespace: "{{ cluster_name }}"
+      register: _invfra
+      retries: 3
+      delay: 30
+      until: 
+        - _invfra.resources | json_query('[*].status') | selectattr('isoDownloadURL', "defined")|list|length > 0
+        - _invfra.resources | json_query('[*].status.isoDownloadURL') != ''
+
+    - name: Save Discovery ISO
+      set_fact:
+        isIso: "{{ _invfra.resources | json_query('[*].status.isoDownloadURL') | first }}"
+
+    - name: Set Artifact 
+      set_stats:
+        data: 
+          isIso: "{{ isIso }}"
+
+    - name: Create new BareMetalHost
+      kubernetes.core.k8s:
+        resource_definition: "{{ lookup('template', 'bmh.j2') }}"
+
+    - name: Wait for Agent registered on a cluster
+      kubernetes.core.k8s_info:
+        api_version: agent-install.openshift.io/v1beta1
+        kind: Agent
+        namespace: "{{ cluster_name }}"
+        label_selectors: 
+          - infraenvs.agent-install.openshift.io={{ cluster_name }}
+      register: agent
+      retries: 40
+      delay: 10
+      until: 
+         - agent.resources|length > 0
+         - agent.resources[0].spec.approved | bool
+
+    - name: Update Agent hostname if it is localhost
+      kubernetes.core.k8s_json_patch:
+        api_version: agent-install.openshift.io/v1beta1
+        kind: Agent
+        namespace: "{{ cluster_name }}"
+        name: "{{ agent.resources[0].metadata.name }}"
+        patch: 
+          - op: replace
+            path: /spec/hostname
+            value: "{{ cluster_name }}-{{ location }}"
+
+    - name: Wait for Agent registered on a cluster
+      kubernetes.core.k8s_info:
+        api_version: extensions.hive.openshift.io/v1beta1
+        kind: AgentClusterInstall
+        namespace: "{{ cluster_name }}"
+        name: "{{ cluster_name }}"
+      register: aci
+      retries: 30
+      delay: 10
+      until: 
+         - aci.resources[0].status.debugInfo.state == 'ready'
+
+    - name: Unhold installation
+      kubernetes.core.k8s_json_patch:
+        api_version: extensions.hive.openshift.io/v1beta1
+        kind: AgentClusterInstall
+        namespace: "{{ cluster_name }}"
+        name: "{{ cluster_name }}"
+        patch: 
+          - op: replace
+            path: /spec/holdInstallation
+            value: false

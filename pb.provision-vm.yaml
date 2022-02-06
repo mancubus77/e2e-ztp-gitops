@@ -1,0 +1,73 @@
+---
+- name: Deploy VM
+  hosts: infra1
+  gather_facts: false
+  vars:
+    cluster_name: glebe
+  tasks:
+    - name: Ensure VM {{ cluster_name }} is down
+      virt:
+        name: "{{ cluster_name }}-sno-redfish"
+        state: destroyed
+      ignore_errors: true
+
+    - name: Undefine VM
+      command: "virsh undefine --nvram {{ cluster_name }}-sno-redfish"
+      ignore_errors: true
+
+    - name: Erase Disk
+      command:  "sudo virt-format -a /var/lib/libvirt/images/default/{{ cluster_name }}-sno-redfish.qcow2"
+      ignore_errors: true
+
+    - name: Create new QCOW image
+      command:  "sudo qemu-img create -f qcow2 /var/lib/libvirt/images/default/{{ cluster_name }}-sno-redfish.qcow2 120G"
+      # ignore_errors: true
+
+    - name: Define VM
+      virt:
+        command: define
+        xml: "{{ lookup('template', 'vm.xml.j2') }}"
+
+    # - name: Start VM to ensure all HW indexed
+    #   virt:
+    #     name: hornsby-sno-redfish
+    #     state: running
+
+    # - name: Let VM run for 15 sec
+    #   pause: 
+    #     seconds: 10
+
+    # - name: Shutdown VM
+    #   virt:
+    #     name: hornsby-sno-redfish
+    #     state: destroyed
+
+    - name: Get VM xmldump
+      command: "virsh dumpxml {{ cluster_name }}-sno-redfish"
+      register: _uuid
+
+    - name: Extract UUID
+      xml:
+        xmlstring: "{{ _uuid.stdout }}"
+        content: "text"
+        xpath: "/domain/uuid"
+      register: xml_value
+
+    - name: Extract MAC
+      xml:
+        xmlstring: "{{ _uuid.stdout }}"
+        content: "attribute"
+        xpath: "/domain/devices/interface/mac"
+      register: mac_xml_value
+
+    - name: Print UUID and MAC
+      debug:
+        msg: |
+          "MAC: {{ mac_xml_value.matches[0].mac.address}}
+          UUID: {{ xml_value.matches[0].uuid }}"
+
+    - name: Set Artifact 
+      set_stats: 
+        data: 
+          uuid: "{{ xml_value.matches[0].uuid }}"
+          mac: "{{ mac_xml_value.matches[0].mac.address}}"
