@@ -6,7 +6,7 @@
   #   cluster_name: glebe
   tasks:
     - name: Ensure VM {{ cluster_name }} is down
-      virt:
+      community.libvirt.virt:
         name: "{{ cluster_name }}-sno-redfish"
         state: destroyed
       ignore_errors: true
@@ -24,7 +24,7 @@
       # ignore_errors: true
 
     - name: Define VM
-      virt:
+      community.libvirt.virt:
         command: define
         xml: "{{ lookup('template', 'vm.xml.j2') }}"
 
@@ -47,14 +47,14 @@
       register: _uuid
 
     - name: Extract UUID
-      xml:
+      community.general.xml:
         xmlstring: "{{ _uuid.stdout }}"
         content: "text"
         xpath: "/domain/uuid"
       register: xml_value
 
     - name: Extract MAC
-      xml:
+      community.general.xml:
         xmlstring: "{{ _uuid.stdout }}"
         content: "attribute"
         xpath: "/domain/devices/interface/mac"
