@@ -3,3 +3,4 @@ collections:
   - name: kubernetes.core
     version: 2.2.2>=
   - name: community.general
+  - name: community.libvirt
