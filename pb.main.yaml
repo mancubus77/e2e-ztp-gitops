@@ -1,6 +1,6 @@
 ---
 - name: Generate templates and create new repo
-  hosts: infra1
+  hosts: localhost
   gather_facts: false
   # connection: local
   vars:
@@ -39,6 +39,7 @@
         # machine_network: 10.1.196.0/24
       include_role:
         name: e2e-add-cluster-playbooks
+      delegate_to: infra1
 
     - name: Delete Github repository
       vars:
